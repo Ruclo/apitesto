@@ -1,0 +1,82 @@
+[base_urls]:
+  global: http://localhost:5432
+  url1: http://localhost:8000
+  url2: http://localhost:8080/api
+
+
+[groups]:
+  group1:
+    headers:
+      Authorization: "Bearer ......asd"
+
+  global:
+    headers:
+      "Authorization: Bearer ${ENV_API_TOKEN}"
+    query-parameters:
+      id: 12
+    expected:
+      headers:
+        !X-Deprecated-Header
+
+functional_tests:
+  - name: "Get users/5"
+  url: ${url1}/users/{id} http://localhost:8080/api/v2/users
+    [method]: GET
+    [headers]: 
+      Authorization: "Bearer ..."
+    [body]: "asdasdasd"
+
+    [query-parameters]:
+      id: 5
+    [path-parameters]:
+      id: 5
+    [group]:
+      - common-options1
+    expected:
+      [status]: 200
+      [response-schema]: user-schema.json
+        type: object
+        properties:
+          id : { type: integer }
+          name: { type: string, minLength: 1 }
+          email: { type: string, format: email }
+          address:
+            type: object
+            properties:
+              street: { type: string }
+              city: { type: string }
+              zipcode: { type: string, pattern: '^/d{5}$' }
+      [headers]:
+        - Content-Type: application/json
+        - X-Custom-Header
+        - !X-Deprecated-Header
+        - X-Security-Header: !weak
+      [assertions]:
+        - "$.id >= 0"
+
+load_tests:
+  - name "GET /users Load Test"
+    endpoint: /users
+    [method]: GET
+    phases:
+      - name: "Ramp-Up"
+        duration: 3ms/s/m/h [l]e
+        rps: 1000
+        ccs: 100
+      - name: "Peak"
+        duration: 20m
+        rps: 1000
+        ccs: 100
+      - name: "Cool-Down"
+        duration: 30s
+        rps: 50
+        ccs: 10
+    think_time:
+      min: 100ms
+      max: 500ms
+    timeout:
+      connect: 500ms
+      request: 2s
+  assertions:
+    - "error_rate < 1%"
+    - "p90_response_time < 200ms"
