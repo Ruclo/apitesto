@@ -1,40 +1,38 @@
-[base-urls]:
-  global: http://localhost:5432
+base-urls:
+  default: http://localhost:5432
   url1: http://localhost:8000
   url2: http://localhost:8080/api
 
-
-[groups]:
-  group1:
-    request-headers:
-      - Authorization: Bearer ......asd
-
+groups:
   global:
     request-headers:
-      - Authorization: Bearer ${ENV_API_TOKEN}
+    - "Authorization: Bearer ${ENV_API_TOKEN}"
     query-parameters:
       id: 12
     expected:
       headers:
         - !X-Deprecated-Header
 
+  group1:
+    request-headers:
+      - Authorization: Bearer ......asd
+
+  
 functional-tests:
   - name: "Get users/5"
-    url: ${url1}/users/{id} http://localhost:8080/api/v2/users
-    [method]: GET
-    [request-headers]: 
-      Authorization: "Bearer ..."
-    [body]: "asdasdasd"
-
-    [query-parameters]:
+    url: "/users"
+    method: GET
+    request-headers: 
+      - Authorization: Bearer ...
+    query-parameters:
       id: 5
-    [path-parameters]:
+    path-parameters:
       id: 5
-    [group]:
+    groups:
       - common-options1
     expected:
-      [status]: 200
-      [response-schema]: user-schema.json
+      status: 200
+      response-schema: 
         type: object
         properties:
           id : { type: integer }
@@ -46,20 +44,22 @@ functional-tests:
               street: { type: string }
               city: { type: string }
               zipcode: { type: string, pattern: '^/d{5}$' }
-      [headers]:
+      headers:
         - Content-Type: application/json
         - X-Custom-Header
         - !X-Deprecated-Header
         - X-Security-Header: !weak
-      [assertions]:
+      assertions:
         - "$.id >= 0"
 
 load-tests:
-  - name "GET /users Load Test"
-    endpoint: /users
-    [method]: GET
+  - name: "GET /users Load Test"
+    url: /users
+    method: GET
     request-headers:
-      - Authorization: Bearer ...
+      - X-ANY-HEADER
+    groups:
+      - common-options1
     phases:
       - name: "Ramp-Up"
         duration: 3ms/s/m/h [l]e
@@ -79,6 +79,6 @@ load-tests:
     timeout:
       connect: 500ms
       request: 2s
-    sucess-criteria:
+    success-criteria:
       - "error_rate < 1%"
       - "p90_response_time < 200ms"

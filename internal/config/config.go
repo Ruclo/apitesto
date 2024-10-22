@@ -41,37 +41,39 @@ const (
 )
 
 type Config struct {
-	BaseURLs			map[string]string		`yaml:"base_urls,omitempty"`	
+	BaseURLs			map[string]string		`yaml:"base-urls,omitempty"`	
 	Groups				map[string]GroupConfig	`yaml:"groups,omitempty"`
-	FunctionalTests		[]FunctionalTest 		`yaml:"functional_tests,omitempty"`
-	LoadTests			[]LoadTest				`yaml:"load_tests,omitempty"`
+	FunctionalTests		[]FunctionalTest 		`yaml:"functional-tests,omitempty"`
+	LoadTests			[]LoadTest				`yaml:"load-tests,omitempty"`
 }
 
 type BaseTest struct {
 	Name			string				`yaml:"name"`
 	URL				string				`yaml:"url"`
 	Method			HTTPMethod 			`yaml:"method"`
-	Headers			HeadersMap 			`yaml:"headers,omitempty"`
+	Headers			HeadersMap 			`yaml:"request-headers,omitempty"`
 	Body			string				`yaml:"body,omitempty"`
 	QueryParams 	map[string]string 	`yaml:"query-parameters,omitempty"`
 	PathParams 		map[string]string 	`yaml:"path-parameters,omitempty"`
 	Groups			[]string			`yaml:"groups,omitempty"`
 	Timeout			Timeout				`yaml:"timeout,omitempty"`
-	Assertions		[]string			`yaml:"assertions,omitempty"`
 }
 
 type GroupConfig struct {
-	URL				string				`yaml:"url,omitempty"`
+	/*URL				string				`yaml:"url,omitempty"`
 	Method			HTTPMethod 			`yaml:"method,omitempty"`
-	Headers			HeadersMap 			`yaml:"headers,omitempty"`
+	Headers			HeadersMap 			`yaml:"request-headers,omitempty"`
 	Body			string				`yaml:"body,omitempty"`
 	QueryParams 	map[string]string 	`yaml:"query-parameters,omitempty"`
 	PathParams 		map[string]string 	`yaml:"path-parameters,omitempty"`
 	Timeout			Timeout				`yaml:"timeout,omitempty"`
 	Assertions		[]string			`yaml:"assertions,omitempty"`
+	SuccessCriteria []string			`yaml:"success-criteria,omitempty`
 	Expected		ExpectedResponse	`yaml:"expected,omitempty"`
 	Phases			[]Phase				`yaml:"phases,omitempty"`
-	ThinkTime		ThinkTime			`yaml:"think-time,omitempty`
+	ThinkTime		ThinkTime			`yaml:"think-time,omitempty`*/
+	FunctionalTest
+	LoadTest
 }
 
 type FunctionalTest struct {
@@ -81,8 +83,9 @@ type FunctionalTest struct {
 
 type LoadTest struct {
 	BaseTest
-	Phases	[]Phase			`yaml:"phases"`
-	ThinkTime	ThinkTime	`yaml:"think-time,omitempty`
+	Phases			[]Phase		`yaml:"phases"`
+	ThinkTime		ThinkTime	`yaml:"think-time,omitempty`
+	SuccessCriteria []string	`yaml:"success-criteria,omitempty`
 }
 
 type Phase struct {
@@ -123,12 +126,27 @@ func (eh *ExpectedHeader) UnmarshalYAML(unmarshal func(interface{}) error) error
 		return err
 	}
 
-	headerStr, ok := rawHeader.(string)
-	if !ok {
-		return fmt.Errorf("expected header format to be a string, got %T", rawHeader)
+	mapValue, ok := rawHeader.(map[interface{}]interface{})
+	if (!ok) {
+		return fmt.Errorf("unexpected header format %s", rawHeader);
 	}
 
-	if strings.Contains(headerStr, ":") {
+	for k,v := range mapValue {
+		key, ok := k.(string)
+		if !ok {
+			return fmt.Errorf("wrong header format %s", k)
+		}
+
+		value, ok := v.(string)
+		
+		if !ok {
+			return fmt.Errorf("wrong header format %s", v)
+		}
+
+
+	}
+	return nil
+	/*if strings.Contains(headerStr, ":") {
 		if strings.HasPrefix(headerStr, "!") {
 			return fmt.Errorf("expected header format wrong, starts with ! and contains =, %s", headerStr)
 		}
@@ -164,7 +182,7 @@ func (eh *ExpectedHeader) UnmarshalYAML(unmarshal func(interface{}) error) error
 			eh.Type = HeaderRequired 
 		}
 	}
-	return nil
+	return nil*/
 	
 }
 
@@ -172,6 +190,7 @@ type ExpectedResponse struct {
 	Status			int 					`yaml:"status"`
 	Headers			[]ExpectedHeader 		`yaml:"headers,omitempty"`
 	ResponseSchema 	map[string]interface{} 	`yaml:"response-schema,omitempty"`
+	Assertions		[]string				`yaml:"assertions,omitempty"`
 }
 
 func LoadConfigFromYAML(filePath string) (*Config, error) {
