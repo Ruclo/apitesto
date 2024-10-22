@@ -126,64 +126,47 @@ func (eh *ExpectedHeader) UnmarshalYAML(unmarshal func(interface{}) error) error
 		return err
 	}
 
-	mapValue, ok := rawHeader.(map[interface{}]interface{})
-	if (!ok) {
-		return fmt.Errorf("unexpected header format %s", rawHeader);
-	}
+	if mapValue, ok := rawHeader.(map[interface{}]interface{}); ok {
+		for k, v := range mapValue {
+			key, ok := k.(string)
+			if !ok {
+				return fmt.Errorf("wrong header format %s", rawHeader)
+			}
+			value, ok := v.(string)
 
-	for k,v := range mapValue {
-		key, ok := k.(string)
-		if !ok {
-			return fmt.Errorf("wrong header format %s", k)
-		}
-
-		value, ok := v.(string)
-		
-		if !ok {
-			return fmt.Errorf("wrong header format %s", v)
-		}
-
-
-	}
-	return nil
-	/*if strings.Contains(headerStr, ":") {
-		if strings.HasPrefix(headerStr, "!") {
-			return fmt.Errorf("expected header format wrong, starts with ! and contains =, %s", headerStr)
-		}
-
-		parts := strings.SplitN(headerStr, ":", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid expected header format: %s", headerStr)
-		}
-		
-		eh.Key = parts[0]
-		eh.Value = strings.TrimPrefix(parts[1], "!")
-
-		if len(eh.Value) == 0 {
-			return fmt.Errorf("invalid expected header format: %s", headerStr)
-		}
-		
-		if strings.HasPrefix(parts[1], "!") {
-			eh.Type = HeaderValueForbidden 
-		} else {
+			if !ok {
+				return fmt.Errorf("wrong header format %s", rawHeader)
+			}
+			eh.Key = strings.TrimPrefix(key, "!")
+			eh.Value = strings.TrimPrefix(value, "!")
 			eh.Type = HeaderValueRequired
+
+			if strings.HasPrefix(value, "!") {
+				eh.Type = HeaderValueForbidden
+			}
+
+			if strings.HasPrefix(key, "!") {
+				return fmt.Errorf("wrong header format %s", rawHeader)
+			}
 		}
-		
-		
-	} else {
-		eh.Key = strings.TrimPrefix(headerStr, "!")
-		if len(eh.Key) == 0 {
-			return fmt.Errorf("invalid expected header format: %s", headerStr)
-		}
-		
-		if strings.HasPrefix(headerStr, "!") {
-			eh.Type = HeaderForbidden
-		} else {
-			eh.Type = HeaderRequired 
-		}
+			
+
+		return nil
 	}
-	return nil*/
 	
+	if strHeader, ok := rawHeader.(string); ok {
+			eh.Key = strings.TrimPrefix(strHeader, "!")
+			
+			switch strings.HasPrefix(strHeader, "!") {
+			case true:
+				eh.Type = HeaderRequired
+			case false:
+				eh.Type = HeaderForbidden
+			}
+			
+		return nil
+	}
+	return fmt.Errorf("unexpected header format %s", rawHeader);
 }
 
 type ExpectedResponse struct {
